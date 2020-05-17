@@ -9,9 +9,12 @@ var srt = (function (my) {
   var my = {    // return object
     type: 'multi', // 'multi', 'single'
     offset: 0,     // offset in ms
+    gap: 0,        // gap length in ms
   },
   j,  // holds json
   fN, // fileName for later download
+  lastEnd = 0, // for gap detection
+  even = false, // for dialog coloring
   debug = false;      // DEBUG mode
 
   // start the app
@@ -105,6 +108,7 @@ var srt = (function (my) {
               inf.push('<button id="dl" onclick="srt.getSRT();">Download<br/>SRT</button>');
               inf.push('<select id="sel" onchange="srt.changeType();"><option value="multi">Multi line</option><option value="single">Single lines</option></select>');
               inf.push('&nbsp;&nbsp;<input title="Enter offset in shown format\n+hh:mm:ss,0000\n-hh:mm:ss,0000" id="off" size="13" maxsize="13" value="-00:00:00,000" onchange="srt.changeOffset();"/>');
+              inf.push('&nbsp;&nbsp;<input title="Enter max gap length between subtitles\nhh:mm:ss,0000" id="gap" size="12" maxsize="12" value="00:00:00,000" onchange="srt.changeGapLength();"/>');
             inf.push('</span></div>');
           inf.push('<div><b>Filesize:</b> '+ (file.size/1024).toFixed(2) +' kB</div>');
           inf.push('<div><b>Modified:</b> '+ file.lastModifiedDate +'</div>');
@@ -181,8 +185,20 @@ var srt = (function (my) {
     a.push('</thead>');
     a.push('<tbody>');
     for (var i in j) {
-      if (my.type === 'multi') {
+      // gap detection
+      if (j[i].start*1 - lastEnd*1 > my.gap*1 && my.gap !== 0) {
         a.push('<tr>');
+        a.push('<td colspan="4" class="spacer">&nbsp;</td>');
+        a.push('</tr>');
+        even = !even;
+      }
+
+      if (my.type === 'multi') {
+        if (even) {
+          a.push('<tr class="even">');
+        } else {
+          a.push('<tr class="odd">');
+        }
         a.push('<td>'+ i +'</td>');
         a.push('<td>'+ MSToTime( j[i].start ) +'</td>');
         a.push('<td>'+ MSToTime( j[i].end ) +'</td>');
@@ -191,7 +207,11 @@ var srt = (function (my) {
       }
       if (my.type === 'single') {
         for (var l in j[i].lines) {
-          a.push('<tr>');
+          if (even) {
+            a.push('<tr class="even">');
+          } else {
+            a.push('<tr class="odd">');
+          }
           a.push('<td>'+ i +'</td>');
           a.push('<td>'+ MSToTime( j[i].start ) +'</td>');
           a.push('<td>'+ MSToTime( j[i].end ) +'</td>');
@@ -199,6 +219,7 @@ var srt = (function (my) {
           a.push('</tr>');
         }
       }
+      lastEnd = j[i].end;
     }
     a.push('</tbody>');
     a.push('</table>');
@@ -208,7 +229,7 @@ var srt = (function (my) {
   function JSONtoSRT() {
     var a = [];
     for (var i in j) {
-      if (my.type === 'multi') {
+      //if (my.type === 'multi') {
         a.push(i);
         a.push("\n");
         a.push(MSToTime( j[i].start ) +' --> '+ MSToTime( j[i].end ));
@@ -216,7 +237,8 @@ var srt = (function (my) {
         a.push(j[i].lines.join("\n"));
         a.push("\n");
         a.push("\n");
-      }
+      //}
+      /*
       if (my.type === 'single') {
         for (var l in j[i].lines) {
           a.push(i);
@@ -228,6 +250,7 @@ var srt = (function (my) {
           a.push("\n");
         }
       }
+      */
     }
     log(a);
     return a.join("");
@@ -280,6 +303,10 @@ var srt = (function (my) {
     if (off.value.substr(0, 1) === "-") {
       my.offset *= -1;
     }
+    JSONtoHTML();
+  }
+  my.changeGapLength = function() {
+    my.gap = timeToMS( gap.value );
     JSONtoHTML();
   }
   my.getSRT = getSRT;

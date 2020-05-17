@@ -72,6 +72,9 @@ th {
 tr {
   vertical-align: top;
 }
+table .spacer {
+  background: linear-gradient(135deg, #585 0%, #9F9 100%);
+}
 
 /* Formatting in SRT, bold and underline are easy to spot but i do hard with italic */
 table b {
