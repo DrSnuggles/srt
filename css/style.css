@@ -49,6 +49,9 @@ button {
   background: linear-gradient(135deg, #585 0%, #9F9 100%);
   border: 1px solid #000;
 }
+#dl {
+  right: calc(10vw + 5px);
+}
 input {
   border: 1px solid #000;
 }

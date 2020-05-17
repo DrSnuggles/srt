@@ -11,6 +11,7 @@ var srt = (function (my) {
     offset: 0,     // offset in ms
   },
   j,  // holds json
+  fN, // fileName for later download
   debug = false;      // DEBUG mode
 
   // start the app
@@ -26,11 +27,11 @@ var srt = (function (my) {
     log('doInit');
 
     // create the HTML Elements
-    var html = [];
-    html.push('<header id="info"></header>');
-    html.push('<main id="app"><center>Drop SRT file</center></main>');
+    var a = [];
+    a.push('<header id="info"></header>');
+    a.push('<main id="app"><center>Drop SRT file</center></main>');
 
-    document.body.innerHTML += html.join("");
+    document.body.innerHTML += a.join("");
     addDropHandler();
   }
 
@@ -97,9 +98,11 @@ var srt = (function (my) {
           file = e.dataTransfer.items[i].getAsFile();
           // write file infos
           var inf = [];
+          fN = file.name;
           inf.push('<div><b>Filename:</b> '+ file.name);
             inf.push('&nbsp;&nbsp;<span id="err">');
-              inf.push('<button onclick="srt.copyToClip();">Copy</button>');
+              inf.push('<button id="ctc" onclick="srt.copyToClip();">Copy<br/>all to<br/>clipboard</button>');
+              inf.push('<button id="dl" onclick="srt.getSRT();">Download<br/>SRT</button>');
               inf.push('<select id="sel" onchange="srt.changeType();"><option value="multi">Multi line</option><option value="single">Single lines</option></select>');
               inf.push('&nbsp;&nbsp;<input title="Enter offset in shown format\n+hh:mm:ss,0000\n-hh:mm:ss,0000" id="off" size="13" maxsize="13" value="-00:00:00,000" onchange="srt.changeOffset();"/>');
             inf.push('</span></div>');
@@ -136,10 +139,7 @@ var srt = (function (my) {
     var id;
     for (var i = 0; i < l.length; i++) {
       // skip empty line
-      if (l[i].length === 0 || l[i].charCodeAt(0) === 13) {
-        console.log("i found empty line");
-        continue;
-      }
+      if (l[i].length === 0 || l[i].charCodeAt(0) === 13) continue;
 
       // numeric := ID
       if (!isNaN(l[i])) {
@@ -171,39 +171,66 @@ var srt = (function (my) {
     JSONtoHTML();
   }
   function JSONtoHTML() {
-    var html = [];
-    html.push('<table id="tbl" cellspacing="0" cellpadding="0" border="1">');
-    html.push('<thead>');
-      html.push('<th>Nr.</th>');
-      html.push('<th>Start</th>');
-      html.push('<th>End</th>');
-      html.push('<th>Text</th>');
-    html.push('</thead>');
-    html.push('<tbody>');
+    var a = [];
+    a.push('<table id="tbl" cellspacing="0" cellpadding="0" border="1">');
+    a.push('<thead>');
+      a.push('<th>Nr.</th>');
+      a.push('<th>Start</th>');
+      a.push('<th>End</th>');
+      a.push('<th>Text</th>');
+    a.push('</thead>');
+    a.push('<tbody>');
     for (var i in j) {
       if (my.type === 'multi') {
-        html.push('<tr>');
-        html.push('<td>'+ i +'</td>');
-        html.push('<td>'+ MSToTime( j[i].start ) +'</td>');
-        html.push('<td>'+ MSToTime( j[i].end ) +'</td>');
-        html.push('<td>'+ j[i].lines.join("<br/>") +'</td>');
-        html.push('</tr>');
+        a.push('<tr>');
+        a.push('<td>'+ i +'</td>');
+        a.push('<td>'+ MSToTime( j[i].start ) +'</td>');
+        a.push('<td>'+ MSToTime( j[i].end ) +'</td>');
+        a.push('<td>'+ j[i].lines.join("<br/>") +'</td>');
+        a.push('</tr>');
       }
       if (my.type === 'single') {
         for (var l in j[i].lines) {
-          html.push('<tr>');
-          html.push('<td>'+ i +'</td>');
-          html.push('<td>'+ MSToTime( j[i].start ) +'</td>');
-          html.push('<td>'+ MSToTime( j[i].end ) +'</td>');
-          html.push('<td>'+ j[i].lines[l] +'</td>');
-          html.push('</tr>');
+          a.push('<tr>');
+          a.push('<td>'+ i +'</td>');
+          a.push('<td>'+ MSToTime( j[i].start ) +'</td>');
+          a.push('<td>'+ MSToTime( j[i].end ) +'</td>');
+          a.push('<td>'+ j[i].lines[l] +'</td>');
+          a.push('</tr>');
         }
       }
     }
-    html.push('</tbody>');
-    html.push('</table>');
-    log(html);
-    app.innerHTML = html.join("");
+    a.push('</tbody>');
+    a.push('</table>');
+    log(a);
+    app.innerHTML = a.join("");
+  }
+  function JSONtoSRT() {
+    var a = [];
+    for (var i in j) {
+      if (my.type === 'multi') {
+        a.push(i);
+        a.push("\n");
+        a.push(MSToTime( j[i].start ) +' --> '+ MSToTime( j[i].end ));
+        a.push("\n");
+        a.push(j[i].lines.join("\n"));
+        a.push("\n");
+        a.push("\n");
+      }
+      if (my.type === 'single') {
+        for (var l in j[i].lines) {
+          a.push(i);
+          a.push("\n");
+          a.push(MSToTime( j[i].start ) +' --> '+ MSToTime( j[i].end ));
+          a.push("\n");
+          a.push(j[i].lines[l]);
+          a.push("\n");
+          a.push("\n");
+        }
+      }
+    }
+    log(a);
+    return a.join("");
   }
   function selectElementContents(el) {
     var body = document.body, range, sel;
@@ -225,6 +252,18 @@ var srt = (function (my) {
     }
     document.execCommand("Copy");
   }
+  function download(content, fileName) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([content], {type: 'text/plain'}));
+    a.setAttribute('download', fileName);
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  function getSRT() {
+    var filename = fN + "_"+ my.type +"_"+ my.offset +"_processed.srt";
+    download(JSONtoSRT(), filename);
+  }
 
   //
   // public
@@ -243,6 +282,7 @@ var srt = (function (my) {
     }
     JSONtoHTML();
   }
+  my.getSRT = getSRT;
 
   return my;
 }(srt || {}));
