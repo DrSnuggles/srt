@@ -30,6 +30,16 @@ center {
   top: calc(50vh - 60px);
   font-size: 5vw;
 }
+#d_opt {
+  position: absolute;
+  top: 0;
+  right: calc(20vw + 10px);
+}
+#d_voice {
+  position: absolute;
+  top: 30px;
+  right: calc(20vw + 10px);
+}
 
 /* Main content area */
 main#app {
@@ -44,12 +54,16 @@ button {
   top: 0;
   right: 0;
   width: 10vw;
-  height: 60px;
+  height: 25px;
   background-color: var(--bgCol);
   background: linear-gradient(135deg, #585 0%, #9F9 100%);
   border: 1px solid #000;
 }
 #dl {
+  top: 35px;
+}
+#pl {
+  top: 35px;
   right: calc(10vw + 5px);
 }
 input {
@@ -74,6 +88,9 @@ tr {
 }
 table .spacer {
   background: linear-gradient(135deg, #585 0%, #9F9 100%);
+}
+td[onclick] {
+  cursor: hand;
 }
 
 /* Formatting in SRT, bold and underline are easy to spot but i do hard with italic */

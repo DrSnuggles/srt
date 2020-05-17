@@ -8,6 +8,7 @@ Drop your SRT file and grab a table
 - Time offset. No field validation here yet. You should know what you are doing.
 - Save/Download SRT
 - Dialog detection
+- Speak with help of WebSpeech API
 
 ## License
 MIT

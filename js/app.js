@@ -12,9 +12,12 @@ var srt = (function (my) {
     gap: 0,        // gap length in ms
   },
   j,  // holds json
-  fN, // fileName for later download
   lastEnd = 0, // for gap detection
   even = false, // for dialog coloring
+  synth = window.speechSynthesis,
+  voices = [],
+  isPlaying = false,
+  startTime,
   debug = false;      // DEBUG mode
 
   // start the app
@@ -31,11 +34,29 @@ var srt = (function (my) {
 
     // create the HTML Elements
     var a = [];
-    a.push('<header id="info"></header>');
+    a.push('<header id="info">');
+      a.push('<div><b>Filename:</b> <span id="filen"></span><span id="err"></span></div>');
+      a.push('<div><b>Info:</b> <span id="files"></span>  <span id="filem"></span></div>');
+      a.push('<button id="ctc" onclick="srt.copyToClip();">Copy</button>');
+      a.push('<button id="dl" onclick="srt.getSRT();">Download</button>');
+      a.push('<button id="pl" onclick="srt.play();">Play</button>');
+      a.push('<div id="d_opt"><select id="sel" onchange="srt.changeType();"><option value="multi">Multi line</option><option value="single">Single lines</option></select>');
+        a.push('&nbsp;&nbsp;<input title="Enter offset in shown format\n+hh:mm:ss,0000\n-hh:mm:ss,0000" id="off" size="13" maxsize="13" value="-00:00:00,000" onchange="srt.changeOffset();"/>');
+        a.push('&nbsp;&nbsp;<input title="Enter max gap length between subtitles\nhh:mm:ss,0000" id="gap" size="12" maxsize="12" value="00:00:00,000" onchange="srt.changeGapLength();"/>');
+      a.push('</div>');
+    a.push('<div id="d_voice">');
+      a.push('<select id="voiceSelect"></select>');
+      a.push('<input id="pitch" type="range" min="0.1" max="2" value="1" step="0.1" oncontextmenu="this.value=1;"/>');
+      a.push('<input id="rate" type="range" min="0.1" max="2" value="1" step="0.1" oncontextmenu="this.value=1;"/>');
+    a.push('</div>');
+    a.push('</header>');
     a.push('<main id="app"><center>Drop SRT file</center></main>');
 
     document.body.innerHTML += a.join("");
     addDropHandler();
+
+    speechSynthesis.onvoiceschanged = populateVoiceList;
+
   }
 
   //
@@ -100,19 +121,9 @@ var srt = (function (my) {
         if (e.dataTransfer.items[i].kind === "file") {
           file = e.dataTransfer.items[i].getAsFile();
           // write file infos
-          var inf = [];
-          fN = file.name;
-          inf.push('<div><b>Filename:</b> '+ file.name);
-            inf.push('&nbsp;&nbsp;<span id="err">');
-              inf.push('<button id="ctc" onclick="srt.copyToClip();">Copy<br/>all to<br/>clipboard</button>');
-              inf.push('<button id="dl" onclick="srt.getSRT();">Download<br/>SRT</button>');
-              inf.push('<select id="sel" onchange="srt.changeType();"><option value="multi">Multi line</option><option value="single">Single lines</option></select>');
-              inf.push('&nbsp;&nbsp;<input title="Enter offset in shown format\n+hh:mm:ss,0000\n-hh:mm:ss,0000" id="off" size="13" maxsize="13" value="-00:00:00,000" onchange="srt.changeOffset();"/>');
-              inf.push('&nbsp;&nbsp;<input title="Enter max gap length between subtitles\nhh:mm:ss,0000" id="gap" size="12" maxsize="12" value="00:00:00,000" onchange="srt.changeGapLength();"/>');
-            inf.push('</span></div>');
-          inf.push('<div><b>Filesize:</b> '+ (file.size/1024).toFixed(2) +' kB</div>');
-          inf.push('<div><b>Modified:</b> '+ file.lastModifiedDate +'</div>');
-          info.innerHTML = inf.join("");
+          filen.innerText = file.name;
+          files.innerText = (file.size/1024).toFixed(2) +' kB';
+          filem.innerText = file.lastModifiedDate;
           break;
         }
       }
@@ -138,6 +149,7 @@ var srt = (function (my) {
   }
   function parseSRT(s) { // string
     // https://en.wikipedia.org/wiki/SubRip
+    err.innerText = "";
     var l = s.split("\n"); //lines
     j = {}; // final output object
     var id;
@@ -175,6 +187,9 @@ var srt = (function (my) {
     JSONtoHTML();
   }
   function JSONtoHTML() {
+    if (err.innerText !== "") return;
+    if (typeof j === "undefined") return;
+    if (Object.keys(j).length === 0) return;
     var a = [];
     a.push('<table id="tbl" cellspacing="0" cellpadding="0" border="1">');
     a.push('<thead>');
@@ -202,7 +217,7 @@ var srt = (function (my) {
         a.push('<td>'+ i +'</td>');
         a.push('<td>'+ MSToTime( j[i].start ) +'</td>');
         a.push('<td>'+ MSToTime( j[i].end ) +'</td>');
-        a.push('<td>'+ j[i].lines.join("<br/>") +'</td>');
+        a.push('<td onclick="srt.speak(this.innerText);">'+ j[i].lines.join("<br/>") +'</td>');
         a.push('</tr>');
       }
       if (my.type === 'single') {
@@ -215,7 +230,7 @@ var srt = (function (my) {
           a.push('<td>'+ i +'</td>');
           a.push('<td>'+ MSToTime( j[i].start ) +'</td>');
           a.push('<td>'+ MSToTime( j[i].end ) +'</td>');
-          a.push('<td>'+ j[i].lines[l] +'</td>');
+          a.push('<td onclick="srt.speak(this.innerText);">'+ j[i].lines[l] +'</td>');
           a.push('</tr>');
         }
       }
@@ -227,6 +242,7 @@ var srt = (function (my) {
     app.innerHTML = a.join("");
   }
   function JSONtoSRT() {
+    if (err.innerText !== "") return;
     var a = [];
     for (var i in j) {
       //if (my.type === 'multi') {
@@ -284,15 +300,85 @@ var srt = (function (my) {
     document.body.removeChild(a);
   }
   function getSRT() {
-    var filename = fN + "_"+ my.type +"_"+ my.offset +"_processed.srt";
+    if (filen.innerText === "") return;
+    if (err.innerText !== "") return;
+    var filename = filen + "_"+ my.type +"_"+ my.offset +"_processed.srt";
     download(JSONtoSRT(), filename);
+  }
+
+  // voice synthesis
+  function populateVoiceList() {
+    voices = synth.getVoices();
+    var selectedIndex = voiceSelect.selectedIndex < 0 ? 0 : voiceSelect.selectedIndex;
+    voiceSelect.innerHTML = '';
+    for(var i = 0; i < voices.length ; i++) {
+      var option = document.createElement('option');
+      option.textContent = voices[i].name + ' (' + voices[i].lang + ')';
+
+      if(voices[i].default) {
+        option.textContent += ' -- DEFAULT';
+      }
+
+      option.setAttribute('data-lang', voices[i].lang);
+      option.setAttribute('data-name', voices[i].name);
+      voiceSelect.appendChild(option);
+
+      // lang de-DE
+      if (voices[i].lang === "de-DE") {
+        selectedIndex = i;
+      }
+    }
+
+    voiceSelect.selectedIndex = selectedIndex;
+  }
+
+  function speak(txt) {
+    var utterThis = new SpeechSynthesisUtterance(txt);
+    var selectedOption = voiceSelect.selectedOptions[0].getAttribute('data-name');
+    for(var i = 0; i < voices.length ; i++) {
+      if(voices[i].name === selectedOption) {
+        utterThis.voice = voices[i];
+      }
+    }
+    utterThis.pitch = pitch.value;
+    utterThis.rate = rate.value;
+    synth.speak(utterThis);
+    log("i should speak:"+ txt);
+    utterThis.onpause = function(event) {
+      var char = event.utterance.text.charAt(event.charIndex);
+      console.log('Speech paused at character ' + event.charIndex + ' of "' + event.utterance.text + '", which is "' + char + '".');
+    }
+  }
+  function playSRT() {
+    if (err.innerText !== "") return;
+    if (typeof j === "undefined") return;
+    if (Object.keys(j).length === 0) return;
+    if (isPlaying) return;
+    for (var i in j) {
+      log("create timer @"+ (j[i].start*1+my.offset));
+      if ((j[i].start*1+my.offset) > 0) { // only positive, else all read in row
+        (function(t) {
+          setTimeout(function(){
+            speak(t);
+          }, (j[i].start*1+my.offset));
+        }( j[i].lines.join(" ") ));
+      }
+    }
+    my.startTime = (new Date())*1;
+    isPlaying = true;
+    setInterval(function(){
+      pl.innerText = MSToTime((new Date())*1 - my.startTime - my.offset);
+    },(1000/60));
+    console.log("Playing back");
   }
 
   //
   // public
   //
   my.copyToClip = function() {
-    selectElementContents(tbl);
+    if (typeof tbl !== "undefined") {
+      selectElementContents(tbl);
+    }
   };
   my.changeType = function() {
     my.type = sel.value;
@@ -310,6 +396,8 @@ var srt = (function (my) {
     JSONtoHTML();
   }
   my.getSRT = getSRT;
+  my.speak = speak;
+  my.play = playSRT;
 
   return my;
 }(srt || {}));
