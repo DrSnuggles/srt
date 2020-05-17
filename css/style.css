@@ -2,8 +2,7 @@
 
 /* Vars */
 :root {
-  --bgCol: #131;
-  --mainCol: #FFF;
+  --bgCol: #ADA;
 }
 
 /* Typography */
@@ -14,8 +13,7 @@
 body {
   margin: 0;
   background-color: var(--bgCol);
-  background: linear-gradient(45deg, #131 0%, #464 100%);
-  color: #FFF;
+  background: linear-gradient(45deg, #898 0%, #ADA 100%);
   width: 100vw;
   height: 100vh;
 }
@@ -66,7 +64,7 @@ table {
 th {
   position: sticky;
   top: 0;
-  background: linear-gradient(45deg, #131 0%, #464 100%);
+  background: linear-gradient(45deg, #898 0%, #ADA 100%);
 }
 tr {
   vertical-align: top;
@@ -74,11 +72,11 @@ tr {
 
 /* Formatting in SRT, bold and underline are easy to spot but i do hard with italic */
 table b {
-  background-color: #040;
+  background-color: #8D8;
 }
 table i {
-  background-color: #440;
+  background-color: #DD8;
 }
 table u {
-  background-color: #004;
+  background-color: #88D;
 }
