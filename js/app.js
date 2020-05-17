@@ -53,7 +53,7 @@ var srt = (function (my) {
     var neg = "";
     if (ms < 0) {
       neg = "-";
-      ms *= -1
+      ms *= -1;
     }
     hh = Math.floor(ms/1000/60/60);
     ms -= hh * 1000*60*60;
@@ -61,17 +61,16 @@ var srt = (function (my) {
     ms -= mm * 1000*60;
     ss = Math.floor(ms/1000);
     ms -= ss * 1000;
-    return neg + padLeft(hh)+':'+padLeft(mm)+':'+padLeft(ss)+','+padRight(ms);
+    return neg + padLeft(hh)+':'+padLeft(mm)+':'+padLeft(ss)+','+padLeft3(ms);
   }
   function padLeft(n) {
     if (n < 10) n = "0" + n;
     return n;
   }
-  function padRight(n) {
-    n +=""; // toString()
-    while (n.length < 3) {
-      n += "0";
-    }
+  function padLeft3(n) {
+    if (n < 10) {
+      n = "00" + n;
+    } else if (n < 100) n = "0" + n;
     return n;
   }
   function addDropHandler() {
