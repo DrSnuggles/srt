@@ -135,28 +135,36 @@ var srt = (function (my) {
     j = {}; // final output object
     var id;
     for (var i = 0; i < l.length; i++) {
+      // skip empty line
+      if (l[i].length === 0 || l[i].charCodeAt(0) === 13) {
+        console.log("i found empty line");
+        continue;
+      }
+
       // numeric := ID
-      if (l[i] == l[i]*1) {
+      if (!isNaN(l[i])) {
         id = l[i]*1;
         j[id] = {lines:[]};
         continue;
       }
+
       // --> contains start and end
       if (l[i].indexOf(" --> ") !== -1) {
         j[id].start = timeToMS( l[i].substr(0,12) );
         j[id].end = timeToMS( l[i].substr(17) );
         continue;
       }
-      // text lines
-      if (l[i] !== "") {
-        if (!j[id]) {
-          log("Unknown format");
-          err.innerHTML = "Unknown format";
-          app.innerHTML = "<center>Drop SRT file</center>";
-          return false;
-        }
-        j[id].lines.push(l[i]);
+
+      // still here but without id.. error
+      if (!j[id]) {
+        log("Unknown format");
+        err.innerHTML = "Unknown format";
+        app.innerHTML = "<center>Drop SRT file</center>";
+        return false;
       }
+
+      // text lines
+      j[id].lines.push(l[i]);
     }
 
     log(j);
@@ -173,24 +181,22 @@ var srt = (function (my) {
     html.push('</thead>');
     html.push('<tbody>');
     for (var i in j) {
-      if (j[i].start) { // ToDo: dismiss Array(0) entry in JSON
-        if (my.type === 'multi') {
+      if (my.type === 'multi') {
+        html.push('<tr>');
+        html.push('<td>'+ i +'</td>');
+        html.push('<td>'+ MSToTime( j[i].start ) +'</td>');
+        html.push('<td>'+ MSToTime( j[i].end ) +'</td>');
+        html.push('<td>'+ j[i].lines.join("<br/>") +'</td>');
+        html.push('</tr>');
+      }
+      if (my.type === 'single') {
+        for (var l in j[i].lines) {
           html.push('<tr>');
           html.push('<td>'+ i +'</td>');
           html.push('<td>'+ MSToTime( j[i].start ) +'</td>');
           html.push('<td>'+ MSToTime( j[i].end ) +'</td>');
-          html.push('<td>'+ j[i].lines.join("<br/>") +'</td>');
+          html.push('<td>'+ j[i].lines[l] +'</td>');
           html.push('</tr>');
-        }
-        if (my.type === 'single') {
-          for (var l in j[i].lines) {
-            html.push('<tr>');
-            html.push('<td>'+ i +'</td>');
-            html.push('<td>'+ MSToTime( j[i].start ) +'</td>');
-            html.push('<td>'+ MSToTime( j[i].end ) +'</td>');
-            html.push('<td>'+ j[i].lines[l] +'</td>');
-            html.push('</tr>');
-          }
         }
       }
     }
