@@ -35,12 +35,13 @@ center {
 #d_opt {
   position: absolute;
   top: 0;
-  right: calc(20vw + 10px);
+  right: 105px;
 }
 #d_voice {
   position: absolute;
   top: 30px;
-  right: calc(20vw + 10px);
+  right: 210px;
+  white-space: nowrap;
 }
 
 /* Main content area */
@@ -55,7 +56,7 @@ button {
   position: fixed;
   top: 0;
   right: 0;
-  width: 10vw;
+  width: 100px;
   height: 25px;
   background-color: var(--bgCol);
   background: linear-gradient(135deg, #585 0%, #9F9 100%);
@@ -66,9 +67,12 @@ button {
 }
 #pl {
   top: 35px;
-  right: calc(10vw + 5px);
+  right: 105px;
 }
 input {
+  border: 1px solid #000;
+}
+select {
   border: 1px solid #000;
 }
 #err {

@@ -43,8 +43,8 @@ var srt = (function (my) {
       a.push('<button id="dl" onclick="srt.getSRT();">Download</button>');
       a.push('<button id="pl" onclick="srt.play();">Play</button>');
       a.push('<div id="d_opt"><select id="sel" onchange="srt.changeType();"><option value="multi">Multi line</option><option value="single">Single lines</option></select>');
-        a.push('&nbsp;&nbsp;<input title="Enter offset in shown format\n+hh:mm:ss,0000\n-hh:mm:ss,0000" id="off" size="13" maxsize="13" value="-00:00:00,000" onchange="srt.changeOffset();"/>');
-        a.push('&nbsp;&nbsp;<input title="Enter max gap length between subtitles\nhh:mm:ss,0000" id="gap" size="12" maxsize="12" value="00:00:00,000" onchange="srt.changeGapLength();"/>');
+        a.push('&nbsp;<input title="Enter offset in shown format\n+hh:mm:ss,0000\n-hh:mm:ss,0000" id="off" size="13" maxsize="13" value="-00:00:00,000" onchange="srt.changeOffset();"/>');
+        a.push('&nbsp;<input title="Enter max gap length between subtitles\nhh:mm:ss,0000" id="gap" size="12" maxsize="12" value="00:00:00,000" onchange="srt.changeGapLength();"/>');
       a.push('</div>');
     a.push('<div id="d_voice">');
       a.push('<select id="voiceSelect"></select>');
