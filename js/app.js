@@ -385,7 +385,12 @@ var srt = (function (my) {
               // add class to this element
               ele.classList.add("attract");
               // scroll to
-              app.scrollTo({ top: ele.offsetTop-window.innerHeight/2, behavior: 'smooth' });
+              if (typeof app.scrollTo !== "undefined") {
+                app.scrollTo({ top: ele.offsetTop-window.innerHeight/2, behavior: 'smooth' });
+              } else {
+                // EDGE
+                app.scrollTop = ele.offsetTop-window.innerHeight/2;
+              }
               // speak
               speak(t);
             }, (j[i].start*1+my.offset))
