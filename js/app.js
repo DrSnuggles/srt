@@ -14,7 +14,7 @@ var srt = (function (my) {
   j,  // holds json
   lastEnd = 0, // for gap detection
   even = false, // for dialog coloring
-  synth = window.speechSynthesis,
+  synth = speechSynthesis,
   voices = [],
   isPlaying = false,
   startTime,
@@ -57,8 +57,10 @@ var srt = (function (my) {
     document.body.innerHTML += a.join("");
     addDropHandler();
 
-    speechSynthesis.onvoiceschanged = populateVoiceList;
-
+    populateVoiceList();
+    if (typeof speechSynthesis !== 'undefined' && speechSynthesis.onvoiceschanged !== undefined) {
+      speechSynthesis.onvoiceschanged = populateVoiceList;
+    }
   }
 
   //
@@ -310,6 +312,9 @@ var srt = (function (my) {
 
   // voice synthesis
   function populateVoiceList() {
+    if(typeof speechSynthesis === 'undefined') {
+      return;
+    }
     voices = synth.getVoices();
     var selectedIndex = voiceSelect.selectedIndex < 0 ? 0 : voiceSelect.selectedIndex;
     voiceSelect.innerHTML = '';
