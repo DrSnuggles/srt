@@ -153,6 +153,8 @@ var srt = (function (my) {
   }
   function parseSRT(s) { // string
     // https://en.wikipedia.org/wiki/SubRip
+    stopPlayback();
+    scrollToEle(app); // scrolltotop
     err.innerText = "";
     var l = s.split("\n"); //lines
     j = {}; // final output object
@@ -356,19 +358,22 @@ var srt = (function (my) {
       console.log('Speech paused at character ' + event.charIndex + ' of "' + event.utterance.text + '", which is "' + char + '".');
     }
   }
+  function stopPlayback() {
+    clearInterval(intervals[0]); // i know i just have one
+    pl.innerText = "Play";
+    for (var i = timers.length-1; i >= 0; i--) {
+      clearTimeout(timers[i]);
+    }
+    timers = [];
+    intervals = [];
+    isPlaying = false;
+  };
   function playSRT() {
     if (err.innerText !== "") return;
     if (typeof j === "undefined") return;
     if (Object.keys(j).length === 0) return;
     if (isPlaying) {
-      clearInterval(intervals[0]); // i know i just have one
-      pl.innerText = "Play";
-      for (var i = timers.length-1; i >= 0; i--) {
-        clearTimeout(timers[i]);
-      }
-      timers = [];
-      intervals = [];
-      isPlaying = false;
+      stopPlayback();
       return;
     }
     for (var i in j) {
@@ -385,12 +390,7 @@ var srt = (function (my) {
               // add class to this element
               ele.classList.add("attract");
               // scroll to
-              if (typeof app.scrollTo !== "undefined") {
-                app.scrollTo({ top: ele.offsetTop-window.innerHeight/2, behavior: 'smooth' });
-              } else {
-                // EDGE
-                app.scrollTop = ele.offsetTop-window.innerHeight/2;
-              }
+              scrollToEle(ele);
               // speak
               speak(t);
             }, (j[i].start*1+my.offset))
@@ -407,6 +407,14 @@ var srt = (function (my) {
       },(1000/60))
     );
     console.log("Playing back");
+  }
+  function scrollToEle(ele) {
+    if (typeof app.scrollTo !== "undefined") {
+      app.scrollTo({ top: ele.offsetTop-window.innerHeight/2, behavior: 'smooth' });
+    } else {
+      // EDGE
+      app.scrollTop = ele.offsetTop-window.innerHeight/2;
+    }
   }
 
   //
