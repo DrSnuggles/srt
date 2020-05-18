@@ -18,6 +18,8 @@ var srt = (function (my) {
   voices = [],
   isPlaying = false,
   startTime,
+  timers = [],  // to skip them later
+  intervals = [],// to skip them later
   debug = false;      // DEBUG mode
 
   // start the app
@@ -46,8 +48,8 @@ var srt = (function (my) {
       a.push('</div>');
     a.push('<div id="d_voice">');
       a.push('<select id="voiceSelect"></select>');
-      a.push('<input id="pitch" type="range" min="0.1" max="2" value="1" step="0.1" oncontextmenu="this.value=1;"/>');
-      a.push('<input id="rate" type="range" min="0.1" max="2" value="1" step="0.1" oncontextmenu="this.value=1;"/>');
+      a.push('<input id="pitch" title="Pitch 1.0" type="range" min="0.1" max="2" value="1" step="0.1" oncontextmenu="this.value=1;" oninput="srt.changePitch(this);"/>');
+      a.push('<input id="rate" title="Rate 1.0" type="range" min="0.1" max="2" value="1" step="0.1" oncontextmenu="this.value=1;" oninput="srt.changeRate(this);"/>');
     a.push('</div>');
     a.push('</header>');
     a.push('<main id="app"><center>Drop SRT file</center></main>');
@@ -210,9 +212,9 @@ var srt = (function (my) {
 
       if (my.type === 'multi') {
         if (even) {
-          a.push('<tr class="even">');
+          a.push('<tr class="even" id="ms_'+ j[i].start +'">');
         } else {
-          a.push('<tr class="odd">');
+          a.push('<tr class="odd" id="ms_'+ j[i].start +'">');
         }
         a.push('<td>'+ i +'</td>');
         a.push('<td>'+ MSToTime( j[i].start ) +'</td>');
@@ -223,9 +225,9 @@ var srt = (function (my) {
       if (my.type === 'single') {
         for (var l in j[i].lines) {
           if (even) {
-            a.push('<tr class="even">');
+            a.push('<tr class="even" id="ms_'+ j[i].start +'">');
           } else {
-            a.push('<tr class="odd">');
+            a.push('<tr class="odd" id="ms_'+ j[i].start +'">');
           }
           a.push('<td>'+ i +'</td>');
           a.push('<td>'+ MSToTime( j[i].start ) +'</td>');
@@ -302,7 +304,7 @@ var srt = (function (my) {
   function getSRT() {
     if (filen.innerText === "") return;
     if (err.innerText !== "") return;
-    var filename = filen + "_"+ my.type +"_"+ my.offset +"_processed.srt";
+    var filename = filen.innerText + "_"+ my.type +"_"+ my.offset +"_processed.srt";
     download(JSONtoSRT(), filename);
   }
 
@@ -353,22 +355,47 @@ var srt = (function (my) {
     if (err.innerText !== "") return;
     if (typeof j === "undefined") return;
     if (Object.keys(j).length === 0) return;
-    if (isPlaying) return;
+    if (isPlaying) {
+      clearInterval(intervals[0]); // i know i just have one
+      pl.innerText = "Play";
+      for (var i = timers.length-1; i >= 0; i--) {
+        clearTimeout(timers[i]);
+      }
+      timers = [];
+      intervals = [];
+      isPlaying = false;
+      return;
+    }
     for (var i in j) {
       log("create timer @"+ (j[i].start*1+my.offset));
       if ((j[i].start*1+my.offset) > 0) { // only positive, else all read in row
-        (function(t) {
-          setTimeout(function(){
-            speak(t);
-          }, (j[i].start*1+my.offset));
-        }( j[i].lines.join(" ") ));
+        var tmp = document.createElement("p"); // better reuse this
+        tmp.innerHTML = j[i].lines.join(" ");
+        tmp = tmp.innerText;
+        (function(t, ms) {
+          timers.push(
+            setTimeout(function(){
+              // get element in table with timecode or sth.
+              var ele = document.getElementById("ms_"+ms);
+              // add class to this element
+              ele.classList.add("attract");
+              // scroll to
+              app.scrollTo({ top: ele.offsetTop-window.innerHeight/2, behavior: 'smooth' });
+              // speak
+              speak(t);
+            }, (j[i].start*1+my.offset))
+          );
+        }( tmp, j[i].start*1 ));
       }
     }
+
     my.startTime = (new Date())*1;
     isPlaying = true;
-    setInterval(function(){
-      pl.innerText = MSToTime((new Date())*1 - my.startTime - my.offset);
-    },(1000/60));
+    intervals.push(
+      setInterval(function(){
+        pl.innerText = MSToTime((new Date())*1 - my.startTime - my.offset);
+      },(1000/60))
+    );
     console.log("Playing back");
   }
 
@@ -395,6 +422,12 @@ var srt = (function (my) {
     my.gap = timeToMS( gap.value );
     JSONtoHTML();
   }
+  my.changePitch = function(ele) {
+    ele.title = "Pitch "+ele.value;
+  };
+  my.changeRate = function(ele) {
+    ele.title = "Rate "+ele.value;
+  };
   my.getSRT = getSRT;
   my.speak = speak;
   my.play = playSRT;

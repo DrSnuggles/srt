@@ -3,6 +3,8 @@
 /* Vars */
 :root {
   --bgCol: #ADA;
+  --transCol: transparent;
+  --attCol: rgba(0,0,255,0.5);
 }
 
 /* Typography */
@@ -102,4 +104,34 @@ table i {
 }
 table u {
   background-color: #88D;
+}
+
+/* highlight spoken text */
+.attract {
+  -webkit-animation: attr 5s 1 alternate;
+     -moz-animation: attr 5s 1 alternate;
+      -ms-animation: attr 5s 1 alternate;
+       -o-animation: attr 5s 1 alternate;
+          animation: attr 5s 1 alternate;
+}
+/* Keyframes */
+@-webkit-keyframes attr {
+  from { background-color: var(--attCol)}
+  to { background-color: var(--transCol)}
+}
+@-moz-keyframes attr {
+  from { background-color: var(--attCol)}
+  to { background-color: var(--transCol)}
+}
+@-ms-keyframes attr {
+  from { background-color: var(--attCol)}
+  to { background-color: var(--transCol)}
+}
+@-o-keyframes attr {
+  from { background-color: var(--attCol)}
+  to { background-color: var(--transCol)}
+}
+@keyframes attr {
+  from { background-color: var(--attCol)}
+  to { background-color: var(--transCol)}
 }
