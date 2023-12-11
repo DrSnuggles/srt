@@ -270,19 +270,20 @@ var srt = (function (my) {
 			16..127 112 Text Field TF
 		*/
 		stl.TTI[(i-1024)/128 + 1] = {
-			SGN: str.substring(i, i+1),					// Subtitle Group Number
-			SN: str.substring(i+1, i+3),				// Subtitle Number
-			EBN: str.substring(i+3, i+4),				// Extension Block Number
-			CS: str.substring(i+4, i+5),				// Cumulative Status
+			SGN: u8[i],						// Subtitle Group Number
+			SN: u8[i+1] + u8[i+2]*0x100,	// Subtitle Number (LittleEndian)
+			EBN: u8[i+3],					// Extension Block Number
+			CS: u8[i+4],					// Cumulative Status
 			start: u8[i+5]*60*60*1000 + u8[i+6]*60*1000 + u8[i+7]*1000 + u8[i+8]/ms,					// TCI Time Code In
-			end: u8[i+9]*60*60*1000 + u8[i+10]*60*1000 + u8[i+11]*1000 + u8[i+12]/ms,						// TCO Time Code Out
-			VP: str.substring(i+13, i+14),						// Vertical Position
-			JC: str.substring(i+14, i+15),						// Justification Code
-			CF: str.substring(i+15, i+16),						// Comment Flag
-			lines: TTIrepl( str.substring(i+16, i+128) ),		// TF Text Field
+			end: u8[i+9]*60*60*1000 + u8[i+10]*60*1000 + u8[i+11]*1000 + u8[i+12]/ms,					// TCO Time Code Out
+			VP: u8[i+13],					// Vertical Position
+			JC: u8[i+14],					// Justification Code
+			CF: u8[i+15],					// Comment Flag
+			lines: TTIrepl( str.substring(i+16, i+128) ),	// TF Text Field
 		}
 	}
 	function TTIrepl(t) {
+		// read as iso-8859-2
 		let ret = t
 		ret = ret.replaceAll('\x8F','')		// unused space
 		ret = ret.replaceAll('\x80','<i>')	// italics ON
