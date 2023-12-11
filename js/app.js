@@ -52,7 +52,7 @@ var srt = (function (my) {
       a.push('<input id="rate" title="Rate 1.0" type="range" min="0.1" max="2" value="1" step="0.1" oncontextmenu="this.value=1;" oninput="srt.changeRate(this);"/>');
     a.push('</div>');
     a.push('</header>');
-    a.push('<main id="app"><center>Drop SRT file</center></main>');
+    a.push('<main id="app"><center>Drop SRT/STL file</center></main>');
 
     document.body.innerHTML += a.join("");
     addDropHandler();
@@ -142,10 +142,20 @@ var srt = (function (my) {
       if (file.size <= 10 * 1024 * 1024) /* 10MB max */ {
         // ToDo: encoding detection, actually just UTF-8
         var reader = new FileReader();
-        reader.readAsText(file);
-        reader.onloadend = function() {
-          parseSRT(reader.result);
-        }
+		const ext = file.name.substring(file.name.lastIndexOf('.')+1).toLowerCase();
+		if (ext === 'srt') {
+			reader.onloadend = function() {
+				parseSRT(reader.result);
+			}
+			reader.readAsText(file);
+		} else if (ext == 'stl') {
+			reader.onloadend = function() {
+				parseSTL(reader.result);
+			}
+			reader.readAsArrayBuffer(file);
+		} else {
+			log("Unknown Extension (."+ext+")");
+		}
       } else {
         log("File too large (>10MB)");
       }
@@ -191,6 +201,112 @@ var srt = (function (my) {
 
     log(j);
     JSONtoHTML();
+  }
+  function parseSTL(ab) {	// arrayBuffer
+	stopPlayback()
+	scrollToEle(app) // scrolltotop
+	err.innerText = ""
+	j = {} // final output object
+
+	// ab to BinaryString
+	const enc = new TextDecoder('iso-8859-2')	// todo: read CodePage first! (437)
+	const str = enc.decode(ab)
+	//console.log(ab,str)
+	//const dv = new DataView(ab)
+	const u8 = new Uint8Array(ab)
+
+	// parse
+	// GSI block (byte 0..1023)
+	const stl = {
+		GSI: {
+			CPN: str.substring(0, 3),		// Code Page Number
+			DFC: str.substring(3, 11),		// Disk Format Code
+			DSC: str.substring(11, 12),		// Display Standard Code
+			CCT: str.substring(12, 14),		// Character Code Table number
+			LC: str.substring(14, 16),		// Language Code
+			OPT: str.substring(16, 48),		// Original Programme Title
+			OET: str.substring(48, 80),		// Original Episode Title
+			TPT: str.substring(80, 112),	// Translated Programme Title
+			TET: str.substring(112, 144),	// Translated Episode Title
+			TN: str.substring(144, 176),	// Translator's Name
+			TCD: str.substring(176, 208),	// Translator's Contact Details
+			SLR: str.substring(208, 224),	// Subtitle List Reference Code
+			CD: str.substring(224, 230),	// Creation Date
+			RD: str.substring(230, 236),	// Revision Date
+			RN: str.substring(236, 238),	// Revision number
+			TNB: str.substring(238, 243),	// Total Number of Text and Timing Information (TTI) blocks
+			TNS: str.substring(243, 248),	// Total Number of Subtitles
+			TNG: str.substring(248, 251),	// Total Number of Subtitle Groups
+			MNC: str.substring(251, 253),	// Maximum Number of Displayable Characters in any text row
+			MNR: str.substring(253, 255),	// Maximum Number of Displayable Rows
+			TCS: str.substring(255, 256),	// Time Code: Status
+			TCP: str.substring(256, 264),	// Time Code: Start-of-Programme
+			TCF: str.substring(264, 272),	// Time Code: First In-Cue
+			TND: str.substring(272, 273),	// Total Number of Disks
+			DSN: str.substring(273, 274),	// Disk Sequence Number
+			CO: str.substring(274, 277),	// Country of Origin CO
+			PUB: str.substring(277, 309),	// Publisher
+			EN: str.substring(309, 341),	// Editor's Name
+			ECD: str.substring(341, 373),	// Editor's Contact Details
+			// 373..447 (75 Spare Bytes)
+			UDA: str.substring(448, 1024),	// User-Defined Area
+		},
+		TTI : [],
+	}
+	const fps = 24
+	const ms = 1/fps
+	for (let i = 1024; i < str.length; i += 128) {	// ab.byteLength
+		//j[id] = {lines:[]};
+		/*
+			0 1 Subtitle Group Number SGN
+			1..2 2 Subtitle Number SN
+			3 1 Extension Block Number EBN
+			4 1 Cumulative Status CS
+			5..8 4 Time Code In TCI
+			9..12 4 Time Code Out TCO
+			13 1 Vertical Position VP
+			14 1 Justification Code JC
+			15 1 Comment Flag CF
+			16..127 112 Text Field TF
+		*/
+		stl.TTI[(i-1024)/128 + 1] = {
+			SGN: str.substring(i, i+1),					// Subtitle Group Number
+			SN: str.substring(i+1, i+3),				// Subtitle Number
+			EBN: str.substring(i+3, i+4),				// Extension Block Number
+			CS: str.substring(i+4, i+5),				// Cumulative Status
+			start: u8[i+5]*60*60*1000 + u8[i+6]*60*1000 + u8[i+7]*1000 + u8[i+8]/ms,					// TCI Time Code In
+			end: u8[i+9]*60*60*1000 + u8[i+10]*60*1000 + u8[i+11]*1000 + u8[i+12]/ms,						// TCO Time Code Out
+			VP: str.substring(i+13, i+14),						// Vertical Position
+			JC: str.substring(i+14, i+15),						// Justification Code
+			CF: str.substring(i+15, i+16),						// Comment Flag
+			lines: TTIrepl( str.substring(i+16, i+128) ),		// TF Text Field
+		}
+	}
+	function TTIrepl(t) {
+		let ret = t
+		ret = ret.replaceAll('\x8F','')		// unused space
+		ret = ret.replaceAll('\x80','<i>')	// italics ON
+		ret = ret.replaceAll('\x81','</i>')	// italics OFF
+		ret = ret.replaceAll('\x82','<u>')	// underline ON
+		ret = ret.replaceAll('\x83','</u>')	// underline OFF
+		ret = ret.replaceAll('\x84','<b>')	// boxing ON
+		ret = ret.replaceAll('\x85','</b>')	// boxing OFF
+		ret = ret.replaceAll('Đ',' ')		// 3. JUNI 2017 Đ AUGUSTA, GEORGIA
+		ret = ret.replaceAll('Ča','ä')
+		ret = ret.replaceAll('Čo','ö')
+		ret = ret.replaceAll('Ču','ü')
+		ret = ret.replaceAll('ČA','Ä')
+		ret = ret.replaceAll('ČO','Ö')
+		ret = ret.replaceAll('ČU','Ü')
+		ret = ret.replaceAll('ű','ß')
+		ret = ret.split('\x8A')				// lines breaks
+		return ret
+	}
+	//console.log(stl)
+
+	j = stl.TTI
+	log(j)
+	JSONtoHTML()
   }
   function JSONtoHTML() {
     if (err.innerText !== "") return;
